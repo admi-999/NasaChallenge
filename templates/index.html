@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Climático del Perú - NASA Space Apps Challenge 2024</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css.css') }}">
+
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+    <video id="bg-video" autoplay muted loop>
+        <source src="{{ url_for('static', filename='videos/video.mp4') }}" type="video/mp4">
+    </video>
+    
+    <div class="container">
+        <div class="header">
+            <h1> Predicción climatica del Perú</h1>
+            <p class="subtitle">Sistema de Predicción Climática - NASA Space Apps Challenge 2025</p>
+        </div>
+
+        <div class="system-info">
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Modelos Entrenados</h3>
+                    <div class="value" id="modelCount">--</div>
+                    <div class="description">Algoritmos de Machine Learning disponibles</div>
+                </div>
+                <div class="info-card">
+                    <h3>Precisión Promedio</h3>
+                    <div class="value" id="avgAccuracy">--%</div>
+                    <div class="description">Confianza promedio en predicciones</div>
+                </div>
+                <div class="info-card">
+                    <h3>Datos Históricos</h3>
+                    <div class="value">1990-2023</div>
+                    <div class="description">34 años de datos climáticos del Perú</div>
+                </div>
+                <div class="info-card">
+                    <h3>Regiones Cubiertas</h3>
+                    <div class="value" id="regionCount">--</div>
+                    <div class="description">Ciudades y departamentos incluidos</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="control-panel">
+                <h2>🎯 Parámetros de Predicción</h2>
+
+                <button class="btn-secondary" onclick="checkModelsStatus()" style="margin-top: 10px;">
+                    🔍 Verificar Modelos
+                </button>
+                
+                <div class="form-group">
+                    <label for="year">📅 Año Objetivo</label>
+                    <input type="number" id="year" min="2024" max="2100" value="2030">
+                </div>
+
+                <div class="form-group">
+                    <label for="region">🗺️ Región del Perú</label>
+                    <select id="region">
+                        <option value="peru">Perú (Nacional)</option>
+                        <option value="lima">Lima (Costa)</option>
+                        <option value="cusco">Cusco (Sierra)</option>
+                        <option value="arequipa">Arequipa (Sur)</option>
+                        <option value="iquitos">Iquitos (Selva)</option>
+                        <option value="trujillo">Trujillo (Costa Norte)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="month">📆 Mes de Predicción</label>
+                    <select id="month">
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6" selected>Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>🤖 Modelo de Machine Learning</label>
+                    <div class="model-selector">
+                        <div class="model-card active" data-model="random_forest">
+                            <div class="icon">🌲</div>
+                            <div class="name">Random Forest</div>
+                            <div class="description">Ensamble de árboles</div>
+                        </div>
+                        <div class="model-card" data-model="ridge">
+                            <div class="icon">🔄</div>
+                            <div class="name">Ridge</div>
+                            <div class="description">Regularización L2</div>
+                        </div>
+                        <div class="model-card" data-model="linear">
+                            <div class="icon">📈</div>
+                            <div class="name">Lineal</div>
+                            <div class="description">Regresión simple</div>
+                        </div>
+                        <!-- CORREGIDO: Agregando los 3 modelos faltantes -->
+                        <div class="model-card" data-model="lasso">
+                            <div class="icon">🎯</div>
+                            <div class="name">Lasso</div>
+                            <div class="description">Regularización L1</div>
+                        </div>
+                        <div class="model-card" data-model="gradient_boost">
+                            <div class="icon">⚡</div>
+                            <div class="name">Gradient Boost</div>
+                            <div class="description">Boosting avanzado</div>
+                        </div>
+                        <div class="model-card" data-model="neural_net">
+                            <div class="icon">🧠</div>
+                            <div class="name">Red Neuronal</div>
+                            <div class="description">Deep Learning</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="predict-btn" onclick="makePrediction()">
+                    🔮 Generar Predicción
+                </button>
+
+                <button class="download-btn" onclick="downloadPredictions()">
+                    📥 Descargar CSV
+                </button>
+
+                <button class="compare-btn" onclick="compareRegions()">
+                    📊 Comparar Regiones
+                </button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                </div>
+
+                <div id="messageContainer"></div>
+
+                <div class="prediction-result" id="result">
+                    <h3>🌡️ Predicción de Temperatura</h3>
+                    <div class="temperature-display" id="tempValue">--°C</div>
+                    <div class="temperature-context" id="tempContext">Esperando predicción...</div>
+                    <div id="alertIndicator"></div>
+                    <div>Nivel de Confianza</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidence" style="width: 0%"></div>
+                    </div>
+                    <div id="confidenceText">--% Confianza</div>
+                    <div id="modelUsed" style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;"></div>
+                </div>
+
+                <!-- Panel de calidad del aire y UV -->
+                <div class="air-quality-panel" id="airQualityPanel" style="display:none;">
+                    <h3>🌫️ Calidad del Aire & UV</h3>
+                    <div class="aqi-indicator" id="aqiIndicator">
+                        <div class="aqi-value">--</div>
+                        <div class="aqi-label">AQI</div>
+                    </div>
+                    <div class="uv-indicator" id="uvIndicator">
+                        <div class="uv-value">--</div>
+                        <div class="uv-label">Índice UV</div>
+                    </div>
+                    <div class="quality-advice" id="qualityAdvice"></div>
+                </div>
+            </div>
+
+            <div class="visualization-panel">
+                <div class="tabs">
+                    <div class="tab active" data-tab="charts">📊 Gráficos</div>
+                    <div class="tab" data-tab="recommendations">🏥 Recomendaciones</div>
+                    <div class="tab" data-tab="agriculture">🌾 Agricultura</div>
+                    <div class="tab" data-tab="map">🗺️ Mapa</div>
+                    <div class="tab" data-tab="comparison">📈 Comparación</div>
+                    <div class="tab" data-tab="historical">📉 Histórico</div>
+                </div>
+
+                <div class="tab-content active" id="charts">
+                    <div class="chart-container">
+                        <canvas id="predictionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="temperatureTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab de Recomendaciones -->
+                <div class="tab-content" id="recommendations">
+                    <div id="healthRecommendations"></div>
+                </div>
+
+                <!-- Tab de Agricultura -->
+                <div class="tab-content" id="agriculture">
+                    <div id="agricultureRecommendations"></div>
+                </div>
+
+                <div class="tab-content" id="map">
+                    <div id="mapContainer"></div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="avgTemp">--°C</div>
+                            <div class="stat-label">Temperatura Promedio</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="maxTemp">--°C</div>
+                            <div class="stat-label">Temperatura Máxima</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="minTemp">--°C</div>
+                            <div class="stat-label">Temperatura Mínima</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="alertCount">--</div>
+                            <div class="stat-label">Ciudades en Alerta</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="comparison">
+                    <div class="chart-container">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                    <div class="comparison-section">
+                        <h4>📋 Análisis Comparativo</h4>
+                        <div id="comparisonAnalysis"></div>
+                        <div class="region-comparison" id="regionComparison"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="historical">
+                    <div class="chart-container">
+                        <canvas id="historicalChart"></canvas>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 25px; margin-top: 20px;">
+                        <h4>📈 Tendencias Históricas</h4>
+                        <div id="historicalAnalysis"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Eventos Extremos -->
+        <div class="full-width-section extreme-events-section" style="margin-top: 40px;">
+            <h2>⚠️ Eventos Climáticos Extremos</h2>
+            <div class="events-controls">
+                <button class="btn-secondary" onclick="loadExtremeEvents()">
+                    🔍 Analizar Riesgos
+                </button>
+            </div>
+            <div id="extremeEventsContainer" style="margin-top: 25px;"></div>
+        </div>
+
+        <!-- Sección de Recursos Hídricos -->
+        <div class="full-width-section water-section" style="margin-top: 40px;">
+            <h2>💧 Análisis de Recursos Hídricos</h2>
+            <div class="water-controls">
+                <button class="btn-secondary" onclick="loadWaterAnalysis()">
+                    📊 Evaluar Recursos
+                </button>
+            </div>
+            <div id="waterAnalysisContainer" style="margin-top: 25px;"></div>
+        </div>
+
+        <!-- Sección de Impacto Económico -->
+        <div class="full-width-section economic-section" style="margin-top: 40px;">
+            <h2>💰 Impacto Económico del Cambio Climático</h2>
+            <div class="economic-controls">
+                <button class="btn-secondary" onclick="loadEconomicImpact()">
+                    📈 Calcular Impacto
+                </button>
+            </div>
+            <div id="economicImpactContainer" style="margin-top: 25px;"></div>
+        </div>
+
+        <!-- Sección de Biodiversidad -->
+        <div class="full-width-section biodiversity-section" style="margin-top: 40px;">
+            <h2>🦜 Impacto en Biodiversidad</h2>
+            <div class="biodiversity-controls">
+                <button class="btn-secondary" onclick="loadBiodiversityImpact()">
+                    🌿 Analizar Biodiversidad
+                </button>
+            </div>
+            <div id="biodiversityContainer" style="margin-top: 25px;"></div>
+        </div>
+
+        <div class="full-width-section">
+            <h2>🔬 Información Técnica del Sistema</h2>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Arquitectura del Sistema</h3>
+                    <p>Backend: Python Flask + scikit-learn</p>
+                    <p>Frontend: HTML5 + JavaScript + Chart.js</p>
+                    <p>Datos: CSV históricos (1990-2023)</p>
+                    <p>API: RESTful con endpoints avanzados</p>
+                </div>
+                <div class="info-card">
+                    <h3>Modelos de ML</h3>
+                    <p>• Random Forest & Gradient Boosting</p>
+                    <p>• Regresión con regularización</p>
+                    <p>• Validación cruzada k-fold</p>
+                    <p>• Métricas: R², MAE, RMSE</p>
+                </div>
+                <div class="info-card">
+                    <h3>Características del Dataset</h3>
+                    <p>• 14 variables climáticas</p>
+                    <p>• Clasificación por regiones</p>
+                    <p>• Índices de El Niño</p>
+                    <p>• Ciclos solares y tendencias</p>
+                </div>
+                <div class="info-card">
+                    <h3>Nuevas Funcionalidades</h3>
+                    <p>• Recomendaciones de salud</p>
+                    <p>• Calendario agrícola inteligente</p>
+                    <p>• Calidad del aire estimada</p>
+                    <p>• Alertas tempranas avanzadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <script src="{{ url_for('static', filename='climate-dashboard.js') }}"onerror="alert('Error cargando JavaScript. Recarga la página.')"></script>
+</html>
