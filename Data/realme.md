@@ -54,6 +54,8 @@ El sistema está organizado en varias carpetas y archivos que trabajan de forma 
 ├── templates/
 │ ├── index.html # Página principal (interfaz de usuario)
 │ └── results.html # Página de resultados y análisis
+├── models/
+│ ├── trained # Prediction models
 ├── data/
 │ └── registros_peru.csv # Datos históricos (416,000 registros)
 └── README.md # Documentación del proyecto
