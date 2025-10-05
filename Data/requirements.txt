@@ -1,5 +1,4 @@
-# Dependencias principales del sistema de predicción climática
-# NASA Space Apps Challenge 2024
+
 
 # Framework web
 Flask==2.3.3
@@ -23,6 +22,3 @@ python-dateutil==2.8.2
 # Servidor web de producción (opcional)
 # gunicorn==21.2.0
 # waitress==2.1.2
-
-# Instalación:
-# pip install -r requirements.txt
